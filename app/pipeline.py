@@ -10,6 +10,7 @@ from app.models import Flight
 import httpx
 from app.collector import fetch_flights
 from app.database import SessionLocal
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -115,10 +116,42 @@ def generate_fingerprint(flight: dict[str, Any]) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
-
 def normalize_flights(
     records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    """Normalize flight records and deduplicate them with Pandas."""
+
+    normalized_records = []
+
+    for raw in records:
+        flight = normalize_flight(raw)
+
+        if flight is None:
+            continue
+
+        flight["fingerprint"] = generate_fingerprint(flight)
+        normalized_records.append(flight)
+
+    if not normalized_records:
+        return []
+
+    # Convert normalized records into a Pandas DataFrame.
+    df = pd.DataFrame(normalized_records)
+
+    # Keep only the first record for each unique fingerprint.
+    original_count = len(df)
+    df = df.drop_duplicates(subset=["fingerprint"], keep="first")
+
+    duplicate_count = original_count - len(df)
+
+    if duplicate_count:
+        logger.info(
+            "Pandas removed %s duplicate flight records",
+            duplicate_count,
+        )
+
+    return df.to_dict(orient="records")
+
     """Normalize records and remove duplicates within the input batch."""
     normalized_records = []
     seen_fingerprints = set()
