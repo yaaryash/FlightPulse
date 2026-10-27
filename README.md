@@ -53,9 +53,12 @@ python -m pip install -r requirements.txt
 - [x] In-batch duplicate detection
 - [x] Database persistence pipeline
 - [x] Flight listing and filtering endpoints
-- [ ] Analytics endpoints
-- [ ] Error handling and structured logging
-- [x] Automated tests (12 passed)
+- [x] Country-wise analytics endpoint
+- [x] Flight summary analytics endpoint
+- [ ] Live data pipeline integration
+- [ ] Robust error handling and rate limiting
+- [x] Automated tests (14 passed)
+
 
 
 
