@@ -1,5 +1,5 @@
 
-# Flight Analytics API
+# FlightPulse
 
 An asynchronous flight data collection and analytics API built with Python.
 
@@ -41,10 +41,13 @@ python -m pip install -r requirements.txt
 ## Project Status
 
 - [x] Initial project structure
-- [x] SQLite engine and database session setup
-- [ ] Flight database model and schema initialization
-- [ ] Asynchronous data collection
+- [x] SQLAlchemy engine and SQLite session setup
+- [x] Flight database model
+- [x] Initial database table creation
+- [ ] Asynchronous data collector
 - [ ] Data normalization and deduplication
-- [ ] REST API endpoints
+- [ ] Database persistence pipeline
+- [ ] Flight listing and filtering endpoints
 - [ ] Analytics endpoints
+- [ ] Error handling and structured logging
 - [ ] Automated tests
