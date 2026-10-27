@@ -7,6 +7,9 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models import Flight
+import httpx
+from app.collector import fetch_flights
+from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -191,3 +194,21 @@ def save_flights(
         "duplicates": duplicates,
         "errors": errors,
     }
+
+async def run_pipeline() -> dict[str, int]:
+    """Fetch, normalize, deduplicate, and persist flight records."""
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(20.0),
+        follow_redirects=True,
+    ) as client:
+        raw_records = await fetch_flights(client)
+
+    normalized_records = normalize_flights(raw_records)
+
+    with SessionLocal() as db:
+        result = save_flights(normalized_records, db)
+
+    result["fetched"] = len(raw_records)
+    result["normalized"] = len(normalized_records)
+    return result

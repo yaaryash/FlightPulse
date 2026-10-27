@@ -114,3 +114,23 @@ def test_save_flights_and_prevent_repeat_duplicates():
         assert len(saved) == 1
     finally:
         db.close()
+
+
+def test_pipeline_normalizes_fixture_records():
+    fixture = {
+        "icao24": "abc123",
+        "callsign": " AI101 ",
+        "origin_country": "India",
+        "last_contact": 1799999990,
+        "longitude": 73.0,
+        "latitude": 19.0,
+        "velocity": 220.0,
+        "on_ground": False,
+    }
+
+    result = normalize_flights([fixture])
+
+    assert len(result) == 1
+    assert result[0]["icao24"] == "abc123"
+    assert result[0]["callsign"] == "AI101"
+    assert len(result[0]["fingerprint"]) == 64

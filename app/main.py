@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+
+from fastapi import FastAPI, HTTPException
 from app.routes.flights import router as flights_router
 from app.routes.analytics import router as analytics_router
+from app.pipeline import run_pipeline
 
 app = FastAPI(
     title="FlightPulse",
@@ -10,6 +12,7 @@ app = FastAPI(
 
 app.include_router(flights_router)
 app.include_router(analytics_router)
+
 
 @app.get("/", tags=["Health"])
 def root():
@@ -22,3 +25,14 @@ def root():
 @app.get("/health", tags=["Health"])
 def health_check():
     return {"status": "healthy"}
+
+
+@app.post("/pipeline/run", tags=["Pipeline"])
+async def trigger_pipeline():
+    try:
+        return await run_pipeline()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Pipeline execution failed. Check application logs.",
+        ) from exc
