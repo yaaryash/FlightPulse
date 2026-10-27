@@ -1,6 +1,9 @@
 import asyncio
 import logging
 import httpx
+from app.rate_limiter import AsyncRateLimiter
+
+rate_limiter = AsyncRateLimiter(min_interval=10.0)
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +23,7 @@ async def fetch_flights(
 
     for attempt in range(retries):
         try:
+            await rate_limiter.wait()
             response = await client.get(
                 OPENSKY_URL,
                 timeout=REQUEST_TIMEOUT,

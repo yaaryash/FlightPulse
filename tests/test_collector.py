@@ -1,9 +1,17 @@
 
 import httpx
 import pytest
-
 from app.collector import fetch_flights
 
+@pytest.fixture(autouse=True)
+def disable_rate_limit_wait(monkeypatch):
+    async def no_wait():
+        return None
+
+    monkeypatch.setattr(
+        "app.collector.rate_limiter.wait",
+        no_wait,
+    )
 
 @pytest.mark.asyncio
 async def test_fetch_flights_parses_response():
