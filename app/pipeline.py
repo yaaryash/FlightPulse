@@ -4,6 +4,9 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from app.models import Flight
 
 logger = logging.getLogger(__name__)
 
@@ -132,3 +135,59 @@ def normalize_flights(
         normalized_records.append(flight)
 
     return normalized_records
+
+def save_flights(
+    records: list[dict[str, Any]],
+    db: Session,
+) -> dict[str, int]:
+    """Save normalized flight records without inserting duplicates."""
+
+    inserted = 0
+    duplicates = 0
+    errors = 0
+
+    for record in records:
+        try:
+            fingerprint = record["fingerprint"]
+
+            existing = db.scalar(
+                select(Flight.id).where(
+                    Flight.fingerprint == fingerprint
+                )
+            )
+
+            if existing is not None:
+                duplicates += 1
+                continue
+
+            db.add(Flight(**record))
+            db.flush()
+            inserted += 1
+
+        except Exception:
+            db.rollback()
+            errors += 1
+            logger.exception(
+                "Failed to save flight record",
+                extra={"icao24": record.get("icao24")},
+            )
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to commit flight records")
+        raise
+
+    logger.info(
+        "Flight persistence completed: inserted=%s duplicates=%s errors=%s",
+        inserted,
+        duplicates,
+        errors,
+    )
+
+    return {
+        "inserted": inserted,
+        "duplicates": duplicates,
+        "errors": errors,
+    }

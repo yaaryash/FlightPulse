@@ -1,5 +1,12 @@
 
 from datetime import datetime
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.database import Base
+from app.models import Flight
+from app.pipeline import save_flights, normalize_flights
 
 from app.pipeline import (
     generate_fingerprint,
@@ -69,3 +76,41 @@ def test_remove_duplicate_records_from_batch():
 
     assert len(records) == 1
     assert len(records[0]["fingerprint"]) == 64
+
+
+def make_test_session():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    return sessionmaker(bind=engine)()
+
+
+def test_save_flights_and_prevent_repeat_duplicates():
+    db = make_test_session()
+    try:
+        raw = {
+            "icao24": "abc123",
+            "callsign": "AI101",
+            "origin_country": "India",
+            "last_contact": 1799999990,
+            "longitude": 73.0,
+            "latitude": 19.0,
+            "velocity": 220.0,
+            "on_ground": False,
+        }
+        records = normalize_flights([raw])
+
+        first = save_flights(records, db)
+        second = save_flights(records, db)
+
+        assert first["inserted"] == 1
+        assert second["inserted"] == 0
+        assert second["duplicates"] == 1
+
+        saved = db.scalars(select(Flight)).all()
+        assert len(saved) == 1
+    finally:
+        db.close()

@@ -51,11 +51,12 @@ python -m pip install -r requirements.txt
 - [x] Timestamp conversion
 - [x] SHA-256 fingerprint generation
 - [x] In-batch duplicate detection
-- [ ] Database persistence pipeline
+- [x] Database persistence pipeline
 - [ ] Flight listing and filtering endpoints
 - [ ] Analytics endpoints
 - [ ] Error handling and structured logging
-- [x] Automated tests (8 passing)
+- [x] Automated tests (9 passing)
+
 
 
 
