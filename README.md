@@ -52,10 +52,10 @@ python -m pip install -r requirements.txt
 - [x] SHA-256 fingerprint generation
 - [x] In-batch duplicate detection
 - [x] Database persistence pipeline
-- [ ] Flight listing and filtering endpoints
+- [x] Flight listing and filtering endpoints
 - [ ] Analytics endpoints
 - [ ] Error handling and structured logging
-- [x] Automated tests (9 passing)
+- [x] Automated tests (12 passed)
 
 
 
