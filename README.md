@@ -44,6 +44,8 @@ python -m pip install -r requirements.txt
 - [x] SQLAlchemy engine and SQLite session setup
 - [x] Flight database model
 - [x] Initial database table creation
+- [x] Pydantic request/response schemas
+- [x] Field validation for flight data
 - [ ] Asynchronous data collector
 - [ ] Data normalization and deduplication
 - [ ] Database persistence pipeline
