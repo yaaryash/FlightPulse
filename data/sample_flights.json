@@ -1,0 +1,38 @@
+[
+  {
+    "icao24": "a1b2c3",
+    "callsign": "AIC101",
+    "origin_country": "India",
+    "time_position": 1793100000,
+    "last_contact": 1793100000,
+    "longitude": 72.8777,
+    "latitude": 19.0760,
+    "baro_altitude": 10668.0,
+    "velocity": 230.5,
+    "on_ground": false
+  },
+  {
+    "icao24": "d4e5f6",
+    "callsign": "UAE202",
+    "origin_country": "United Arab Emirates",
+    "time_position": 1793100060,
+    "last_contact": 1793100060,
+    "longitude": 55.2708,
+    "latitude": 25.2048,
+    "baro_altitude": 10972.0,
+    "velocity": 245.2,
+    "on_ground": false
+  },
+  {
+    "icao24": "g7h8i9",
+    "callsign": "AIC303",
+    "origin_country": "India",
+    "time_position": 1793100120,
+    "last_contact": 1793100120,
+    "longitude": 73.8567,
+    "latitude": 18.5204,
+    "baro_altitude": null,
+    "velocity": 0.0,
+    "on_ground": true
+  }
+]

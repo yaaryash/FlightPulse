@@ -4,13 +4,15 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
+
+import httpx
+import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models import Flight
-import httpx
+
 from app.collector import fetch_flights
 from app.database import SessionLocal
-import pandas as pd
+from app.models import Flight
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +33,15 @@ def parse_timestamp(value: Any) -> datetime | None:
 
     try:
         timestamp = float(value)
-        if timestamp <= 0:
+
+        if not pd.notna(timestamp) or timestamp <= 0:
             return None
 
-        return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(
-            tzinfo=None
-        )
+        return datetime.fromtimestamp(
+            timestamp,
+            tz=timezone.utc,
+        ).replace(tzinfo=None)
+
     except (TypeError, ValueError, OverflowError, OSError):
         logger.warning("Invalid timestamp: %r", value)
         return None
@@ -67,9 +72,15 @@ def normalize_flight(raw: dict[str, Any]) -> dict[str, Any] | None:
     def optional_float(value: Any) -> float | None:
         if value is None:
             return None
+
         try:
             number = float(value)
-            return number if number == number and abs(number) != float("inf") else None
+
+            if not pd.notna(number) or abs(number) == float("inf"):
+                return None
+
+            return number
+
         except (TypeError, ValueError, OverflowError):
             return None
 
@@ -78,10 +89,12 @@ def normalize_flight(raw: dict[str, Any]) -> dict[str, Any] | None:
 
     if longitude is not None and not -180 <= longitude <= 180:
         longitude = None
+
     if latitude is not None and not -90 <= latitude <= 90:
         latitude = None
 
     velocity = optional_float(raw.get("velocity"))
+
     if velocity is not None and velocity < 0:
         velocity = None
 
@@ -113,14 +126,19 @@ def generate_fingerprint(flight: dict[str, Any]) -> str:
         "on_ground": flight["on_ground"],
     }
 
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
 
 def normalize_flights(
     records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Normalize flight records and deduplicate them with Pandas."""
-
+    """Normalize records, convert missing values, and deduplicate with Pandas."""
     normalized_records = []
 
     for raw in records:
@@ -135,12 +153,13 @@ def normalize_flights(
     if not normalized_records:
         return []
 
-    # Convert normalized records into a Pandas DataFrame.
     df = pd.DataFrame(normalized_records)
 
-    # Keep only the first record for each unique fingerprint.
     original_count = len(df)
-    df = df.drop_duplicates(subset=["fingerprint"], keep="first")
+    df = df.drop_duplicates(
+        subset=["fingerprint"],
+        keep="first",
+    )
 
     duplicate_count = original_count - len(df)
 
@@ -150,34 +169,17 @@ def normalize_flights(
             duplicate_count,
         )
 
+    # Convert Pandas NaN/NaT values to Python None.
+    df = df.astype(object).where(pd.notna(df), None)
+
     return df.to_dict(orient="records")
 
-    """Normalize records and remove duplicates within the input batch."""
-    normalized_records = []
-    seen_fingerprints = set()
-
-    for raw in records:
-        flight = normalize_flight(raw)
-        if flight is None:
-            continue
-
-        fingerprint = generate_fingerprint(flight)
-        if fingerprint in seen_fingerprints:
-            logger.info("Skipping duplicate flight state: %s", flight["icao24"])
-            continue
-
-        seen_fingerprints.add(fingerprint)
-        flight["fingerprint"] = fingerprint
-        normalized_records.append(flight)
-
-    return normalized_records
 
 def save_flights(
     records: list[dict[str, Any]],
     db: Session,
 ) -> dict[str, int]:
     """Save normalized flight records without inserting duplicates."""
-
     inserted = 0
     duplicates = 0
     errors = 0
@@ -196,12 +198,14 @@ def save_flights(
                 duplicates += 1
                 continue
 
-            db.add(Flight(**record))
-            db.flush()
+            # Isolate each insert with a savepoint.
+            with db.begin_nested():
+                db.add(Flight(**record))
+                db.flush()
+
             inserted += 1
 
         except Exception:
-            db.rollback()
             errors += 1
             logger.exception(
                 "Failed to save flight record",
@@ -210,6 +214,7 @@ def save_flights(
 
     try:
         db.commit()
+
     except Exception:
         db.rollback()
         logger.exception("Failed to commit flight records")
@@ -228,9 +233,9 @@ def save_flights(
         "errors": errors,
     }
 
+
 async def run_pipeline() -> dict[str, int]:
     """Fetch, normalize, deduplicate, and persist flight records."""
-
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(20.0),
         follow_redirects=True,
@@ -244,4 +249,5 @@ async def run_pipeline() -> dict[str, int]:
 
     result["fetched"] = len(raw_records)
     result["normalized"] = len(normalized_records)
+
     return result

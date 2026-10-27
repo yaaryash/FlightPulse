@@ -182,3 +182,64 @@ async def test_run_pipeline_raises_when_fetch_fails(monkeypatch):
 
     with pytest.raises(httpx.ConnectError):
         await run_pipeline()
+
+def test_normalize_flights_converts_missing_values_to_none():
+    complete_flight = sample_flight()
+
+    incomplete_flight = sample_flight()
+    incomplete_flight.update({
+        "icao24": "DEF456",
+        "time_position": None,
+        "longitude": None,
+        "latitude": None,
+        "baro_altitude": None,
+    })
+
+    records = normalize_flights([
+        complete_flight,
+        incomplete_flight,
+    ])
+
+    assert len(records) == 2
+
+    missing_record = next(
+        record for record in records
+        if record["icao24"] == "def456"
+    )
+
+    assert missing_record["time_position"] is None
+    assert missing_record["longitude"] is None
+    assert missing_record["latitude"] is None
+    assert missing_record["baro_altitude"] is None
+    
+def test_save_flights_with_missing_optional_values():
+    db = make_test_session()
+
+    try:
+        raw = sample_flight()
+        raw.update({
+            "icao24": "MISSING1",
+            "time_position": None,
+            "longitude": None,
+            "latitude": None,
+            "baro_altitude": None,
+        })
+
+        records = normalize_flights([raw])
+        result = save_flights(records, db)
+
+        assert result["inserted"] == 1
+        assert result["errors"] == 0
+
+        saved = db.scalar(
+            select(Flight).where(Flight.icao24 == "missing1")
+        )
+
+        assert saved is not None
+        assert saved.time_position is None
+        assert saved.longitude is None
+        assert saved.latitude is None
+        assert saved.baro_altitude is None
+
+    finally:
+        db.close()

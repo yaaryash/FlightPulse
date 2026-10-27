@@ -3,11 +3,21 @@ from fastapi import FastAPI, HTTPException
 from app.routes.flights import router as flights_router
 from app.routes.analytics import router as analytics_router
 from app.pipeline import run_pipeline
+from contextlib import asynccontextmanager
+from app.database import Base, engine
+from app import models
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
 
 app = FastAPI(
     title="FlightPulse",
     description="Asynchronous flight data pipeline and analytics API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.include_router(flights_router)
