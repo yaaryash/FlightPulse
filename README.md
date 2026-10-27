@@ -42,6 +42,10 @@ python -m pip install -r requirements.txt
 
 ## Project Progress
 
+## Project Status
+
+### Project Progress
+
 - [x] Initial project structure
 - [x] SQLAlchemy engine and SQLite session setup
 - [x] Flight database model
@@ -49,6 +53,7 @@ python -m pip install -r requirements.txt
 - [x] Pydantic request/response schemas
 - [x] Field validation for flight data
 - [x] Asynchronous data collector
+- [x] Retry and timeout handling
 - [x] Data normalization and validation
 - [x] Timestamp conversion
 - [x] SHA-256 fingerprint generation
@@ -58,8 +63,9 @@ python -m pip install -r requirements.txt
 - [x] Country-wise analytics endpoint
 - [x] Flight summary analytics endpoint
 - [x] Live data pipeline integration (`POST /pipeline/run`)
-- [ ] Robust error handling and rate limiting
-- [x] Automated tests (15 passed)
+- [x] OpenSky API rate limiting
+- [x] Pipeline integration tests
+- [x] Automated tests (22 passed)
 
 
 
