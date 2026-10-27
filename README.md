@@ -40,6 +40,8 @@ python -m pip install -r requirements.txt
 
 ## Project Status
 
+## Project Progress
+
 - [x] Initial project structure
 - [x] SQLAlchemy engine and SQLite session setup
 - [x] Flight database model
@@ -55,9 +57,9 @@ python -m pip install -r requirements.txt
 - [x] Flight listing and filtering endpoints
 - [x] Country-wise analytics endpoint
 - [x] Flight summary analytics endpoint
-- [ ] Live data pipeline integration
+- [x] Live data pipeline integration (`POST /pipeline/run`)
 - [ ] Robust error handling and rate limiting
-- [x] Automated tests (14 passed)
+- [x] Automated tests (15 passed)
 
 
 
