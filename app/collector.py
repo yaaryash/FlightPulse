@@ -48,7 +48,7 @@ async def fetch_flights(
 
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning(
-                "OpenSky request failed (attempt %s/%s): %s",
+                "OpenSky request failed (attempt %s/%s): %r",
                 attempt + 1,
                 retries,
                 exc,
