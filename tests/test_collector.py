@@ -56,3 +56,65 @@ async def test_fetch_flights_empty_response():
         flights = await fetch_flights(client)
 
     assert flights == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_flights_retries_after_server_error():
+    attempts = 0
+
+    async def mock_handler(request):
+        nonlocal attempts
+        attempts += 1
+
+        if attempts < 3:
+            return httpx.Response(503, text="Service unavailable")
+
+        return httpx.Response(200, json={"states": []})
+
+    transport = httpx.MockTransport(mock_handler)
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        flights = await fetch_flights(client)
+
+    assert flights == []
+    assert attempts == 3
+
+
+@pytest.mark.asyncio
+async def test_fetch_flights_raises_after_all_retries_fail():
+    attempts = 0
+
+    async def mock_handler(request):
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(503, text="Service unavailable")
+
+    transport = httpx.MockTransport(mock_handler)
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await fetch_flights(client)
+
+    assert attempts == 3
+
+
+@pytest.mark.asyncio
+async def test_fetch_flights_retries_after_network_error():
+    attempts = 0
+
+    async def mock_handler(request):
+        nonlocal attempts
+        attempts += 1
+
+        if attempts == 1:
+            raise httpx.ConnectError("Connection failed")
+
+        return httpx.Response(200, json={"states": []})
+
+    transport = httpx.MockTransport(mock_handler)
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        flights = await fetch_flights(client)
+
+    assert flights == []
+    assert attempts == 2
