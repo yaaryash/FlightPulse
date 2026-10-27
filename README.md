@@ -40,16 +40,18 @@ python -m pip install -r requirements.txt
 
 ## Project Status
 
+
 - [x] Initial project structure
 - [x] SQLAlchemy engine and SQLite session setup
 - [x] Flight database model
 - [x] Initial database table creation
 - [x] Pydantic request/response schemas
 - [x] Field validation for flight data
-- [ ] Asynchronous data collector
+- [x] Asynchronous data collector
 - [ ] Data normalization and deduplication
 - [ ] Database persistence pipeline
 - [ ] Flight listing and filtering endpoints
 - [ ] Analytics endpoints
 - [ ] Error handling and structured logging
-- [ ] Automated tests
+- [x] Automated tests (2 collector tests passing)
+
