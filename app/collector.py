@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import httpx
@@ -6,19 +5,52 @@ import httpx
 logger = logging.getLogger(__name__)
 
 OPENSKY_URL = "https://opensky-network.org/api/states/all"
+REQUEST_TIMEOUT = 20.0
+MAX_RETRIES = 3
 
 
 async def fetch_flights(
     client: httpx.AsyncClient,
-    retries: int = 3,
+    retries: int = MAX_RETRIES,
 ) -> list[dict]:
-    """Fetch current flight states from the OpenSky API."""
+    """Fetch current flight states with timeout and retry handling."""
+
+    if retries < 1:
+        raise ValueError("retries must be at least 1")
 
     for attempt in range(retries):
         try:
-            response = await client.get(OPENSKY_URL)
+            response = await client.get(
+                OPENSKY_URL,
+                timeout=REQUEST_TIMEOUT,
+            )
+
+            if response.status_code == 429:
+                retry_after = response.headers.get(
+                    "X-Rate-Limit-Retry-After-Seconds"
+                )
+                logger.warning(
+                    "OpenSky rate limit reached (attempt %s/%s)",
+                    attempt + 1,
+                    retries,
+                )
+
+                if attempt == retries - 1:
+                    response.raise_for_status()
+
+                try:
+                    delay = float(retry_after) if retry_after else 2**attempt
+                except ValueError:
+                    delay = 2**attempt
+
+                await asyncio.sleep(max(0, min(delay, 60)))
+                continue
+
             response.raise_for_status()
             payload = response.json()
+
+            if not isinstance(payload, dict):
+                raise ValueError("OpenSky response must be a JSON object")
 
             states = payload.get("states") or []
             flights = []
@@ -46,18 +78,16 @@ async def fetch_flights(
             logger.info("Fetched %s flight records", len(flights))
             return flights
 
-        except (httpx.HTTPError, ValueError) as exc:
-            logger.warning(
-                "OpenSky request failed (attempt %s/%s): %r",
+        except (httpx.HTTPError, ValueError):
+            logger.exception(
+                "OpenSky request failed (attempt %s/%s)",
                 attempt + 1,
                 retries,
-                exc,
             )
 
             if attempt == retries - 1:
                 raise
 
-            await asyncio.sleep(2 ** attempt)
+            await asyncio.sleep(2**attempt)
 
     return []
-
